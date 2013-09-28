@@ -1,1 +1,18 @@
-{}
+{
+    "name": "FRP-SbS",
+    "version": "0.0.1",
+    "description": "A step-by-step guide from reactive to functional reactive using bacon.js",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "engines": {
+        "node": "0.10.x",
+        "npm": "1.2.x"
+    },
+    "author": "Stian Veum Møllersen <stian.moellersen@gmail.com>",
+    "dependencies": {
+        "ecstatic": "~0.4.9"
+    }
+}
