@@ -1,18 +1,5 @@
 $(function() {
-    var records, validAlbum, validArtist, validYear, validGenre;
-
-    $.ajax({
-        url: "/records",
-        success: function(data) {
-            records = data;
-            setTimeout(function() {
-                renderRecords(records);
-            }, 1000);
-        },
-        error: function() {
-            $("#records").html("<p>Failed to get records from server</p>");
-        }
-    });
+    var validAlbum, validArtist, validYear, validGenre;
 
     var renderRecords = function(records) {
         var items = _.reduce(records, function(acc, record) {
@@ -23,8 +10,20 @@ $(function() {
                 "<p>Genre: " + record.genre + "</p>" +
                 "</li>";
         }, "");
-        $("#records").html("<ul>" + items + "</ul>");
+        $("#records ul").html(items);
     };
+
+    $.ajax("/records")
+        .done(function(data) {
+            records = data;
+            renderRecords(records);
+        })
+        .fail(function() {
+            $("#records .error").show({duration: 400});
+        })
+        .always(function() {
+            $("#records .loader").remove();
+        });
 
     $("#filter").on("keyup", function() {
         var filter = new RegExp($(this).val(), "i");
@@ -101,17 +100,17 @@ $(function() {
                 "artist": $("#artist").val(),
                 "year": $("#year").val(),
                 "genre": $("#genre").val(),
-            }),
-            success: function(data) {
+            })})
+            .done(function(data) {
                 records.push(data);
                 $("input").val("").trigger("keyup");
                 renderRecords(records);
+            })
+            .fail(function() {
+                $(".pure-form .error").show({duration: 400}).delay(3000).hide({duration: 400});
+            })
+            .always(function() {
                 $(".loader-small").remove();
-            },
-            error: function() {
-                $(".loader-small").remove();
-                $(".error").show({duration: 400}).delay(3000).hide({duration: 400});
-            }
-        });
+            });
     });
 });
