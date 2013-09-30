@@ -13,17 +13,15 @@ $(function() {
         $("#records ul").html(items);
     };
 
-    $.ajax("/records")
-        .done(function(data) {
-            records = data;
-            renderRecords(records);
-        })
-        .fail(function() {
-            $("#records .error").show({duration: 400});
-        })
-        .always(function() {
-            $("#records .loader").remove();
-        });
+    var recordsRequest = Bacon.fromPromise($.ajax("/records"));
+    recordsRequest.onEnd(function() {
+            $("#records .loader").hide();
+    });
+    recordsRequest.onError(function() {
+        $("#records .error").show({duration: 400});
+    });
+
+    var records = recordsRequest.toProperty([]);
 
     $("#filter").on("keyup", function() {
         var filter = new RegExp($(this).val(), "i");
