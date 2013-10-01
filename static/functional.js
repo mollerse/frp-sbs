@@ -13,9 +13,17 @@ $(function() {
         $("#records ul").html(items);
     };
 
+    var filterRecords = function(records, recordFilter) {
+        return _.filter(records, function(record) {
+            return _(record).values().any(function(v) {
+                return recordFilter.test(v);
+            });
+        });
+    };
+
     var recordsRequest = Bacon.fromPromise($.ajax("/records"));
     recordsRequest.onEnd(function() {
-            $("#records .loader").hide();
+        $("#records .loader").hide();
     });
     recordsRequest.onError(function() {
         $("#records .error").show({duration: 400});
@@ -23,14 +31,18 @@ $(function() {
 
     var records = recordsRequest.toProperty([]);
 
-    $("#filter").on("keyup", function() {
-        var filter = new RegExp($(this).val(), "i");
-        renderRecords(_.filter(records, function(record) {
-            return _(record).values().any(function(value) {
-                return filter.test(value);
-            });
-        }));
-    });
+    var recordFilter = Bacon.fromEventTarget($("#filter"), "keyup")
+        .map(function(event) {
+            return event.currentTarget.value;
+        })
+        .toProperty("")
+        .map(function(val) {
+            return new RegExp(val, "i");
+        });
+
+    var filteredRecords = records
+        .combine(recordFilter, filterRecords)
+        .onValue(renderRecords);
 
     $("#album").on("keyup", function() {
         var value = $(this).val();
