@@ -1,6 +1,4 @@
 $(function() {
-    var validAlbum, validArtist, validYear, validGenre;
-
     var renderRecords = function(records) {
         var items = _.reduce(records, function(acc, record) {
             return acc + "<li>" +
@@ -15,112 +13,111 @@ $(function() {
 
     var filterRecords = function(records, recordFilter) {
         return _.filter(records, function(record) {
-            return _(record).values().any(function(v) {
-                return recordFilter.test(v);
-            });
+            return _(record).values().any(testRegex(recordFilter));
         });
     };
 
-    var recordsRequest = Bacon.fromPromise($.ajax("/records"));
-    recordsRequest.onEnd(function() {
-        $("#records .loader").hide();
-    });
-    recordsRequest.onError(function() {
-        $("#records .error").show({duration: 400});
-    });
+    var testRegex = function(pattern) {
+        return function(value) {
+            if(!value) return false;
+            return new RegExp(pattern, "i").test(value);
+        };
+    };
 
-    var records = recordsRequest.toProperty([]);
-
-    var recordFilter = Bacon.fromEventTarget($("#filter"), "keyup")
-        .map(function(event) {
+    var propertyFromInput = function(field) {
+        var value = function(event) {
             return event.currentTarget.value;
-        })
-        .toProperty("")
-        .map(function(val) {
-            return new RegExp(val, "i");
+        };
+        return Bacon.fromEventTarget(field, "keyup")
+            .map(value)
+            .toProperty("");
+    };
+
+    var resetForm = function() {
+        $("#add-record input").val("").trigger("keyup");
+    };
+
+    var mapToInputIcon = function(input, valid) {
+        return input.combine(valid, function(input, valid) {
+            if(!input) return "icon-asterisk";
+            if(!valid) return "icon-warning-sign";
+            return "icon-ok";
         });
+    };
 
-    var filteredRecords = records
-        .combine(recordFilter, filterRecords)
+    var records = Bacon.fromPromise($.ajax("/records"));
+
+    var add = Bacon.fromEventTarget($("[type=submit]"), "click")
+            .doAction(".preventDefault");
+
+    var recordFilter = propertyFromInput($("#filter"));
+    var album = propertyFromInput($("#album"));
+    var artist = propertyFromInput($("#artist"));
+    var year = propertyFromInput($("#year"));
+    var genre = propertyFromInput($("#genre"));
+
+    var record = Bacon.combineTemplate({
+        "album": album,
+        "artist": artist,
+        "year": year,
+        "genre": genre,
+    });
+
+    var addedRecord = record.sampledBy(add)
+        .flatMapLatest(function(record) {
+           return Bacon.fromPromise($.ajax({
+                "url": "/records/new",
+                "type": "POST",
+                "data": JSON.stringify(record)
+            }));
+        })
+        .doAction(resetForm);
+
+    var validAlbum = album
+        .combine(records, function(album, records) {
+            if(!album) return true;
+            return _.any(records,{"album": album});
+        })
+        .not();
+    var validArtist  = artist.map(Boolean);
+    var validYear = year.map(testRegex("^\\d{4}$"));
+    var validGenre = genre.map(Boolean);
+
+    records.map(Boolean).mapError(Boolean).not()
+        .assign($("#records .loader"), "toggle");
+    records.map(Boolean).not().mapError(Boolean)
+        .assign($("#records .error"), "toggle");
+
+    mapToInputIcon(album, validAlbum)
+        .assign($("#album + i"), "attr", "class");
+
+    mapToInputIcon(artist, Bacon.constant(true))
+        .assign($("#artist + i"), "attr", "class");
+
+    mapToInputIcon(year, validYear)
+        .assign($("#year + i"), "attr", "class");
+
+    mapToInputIcon(genre, Bacon.constant(true))
+        .assign($("#genre + i"), "attr", "class");
+
+    validAlbum.and(validArtist).and(validYear).and(validGenre).not()
+        .assign($("[type=submit]"), "attr", "disabled");
+
+    addedRecord.map(Boolean).mapError(Boolean).not()
+        .merge(add.map(Boolean))
+        .assign($(".loader-small"), "toggle");
+
+    addedRecord.map(Boolean).not().mapError(Boolean)
+        .assign($("#add-record .error"), "toggle");
+
+    //TODO: Nye records overskriver gamle
+
+    var allRecords = addedRecord.flatMapLatest(function(val) {
+        return Bacon.constant(val);
+    });
+
+    // records.combine(constantRecord, ".concat").log()
+
+    records.combine(recordFilter, filterRecords)
         .onValue(renderRecords);
-
-    $("#album").on("keyup", function() {
-        var value = $(this).val();
-        if (!value) {
-            $("#album + i").attr("class", "icon-asterisk");
-            validAlbum = false;
-        } else if (_.any(records, {"album": value})) {
-            $("#album + i").attr("class", "icon-warning-sign");
-            validAlbum = false;
-        } else {
-            $("#album + i").attr("class", "icon-ok");
-            validAlbum = true;
-        }
-    });
-
-    $("#artist").on("keyup", function() {
-        var value = $(this).val();
-        if (!value) {
-            $("#artist + i").attr("class", "icon-asterisk");
-            validArtist = false;
-        } else {
-            $("#artist + i").attr("class", "icon-ok");
-            validArtist = true;
-        }
-    });
-
-    $("#year").on("keyup", function() {
-        var value = $(this).val();
-        if (!value) {
-            $("#year + i").attr("class", "icon-asterisk");
-            validYear = false;
-        } else if (/^\d{4}$/.test(value)) {
-            $("#year + i").attr("class", "icon-ok");
-            validYear = true;
-        } else {
-            $("#year + i").attr("class", "icon-warning-sign");
-            validYear = false;
-        }
-    });
-
-    $("#genre").on("keyup", function() {
-        var value = $(this).val();
-        if (!value) {
-            $("#genre + i").attr("class", "icon-asterisk");
-            validGenre = false;
-        } else {
-            $("#genre + i").attr("class", "icon-ok");
-            validGenre = true;
-        }
-    });
-
-    $("input").on("keyup", function() {
-        $("[type=submit]").attr("disabled", !(validAlbum && validArtist && validYear && validGenre));
-    });
-
-    $("[type=submit]").on("click", function(event) {
-        event.preventDefault();
-        $(this).append("<div class='loader-small'></div>");
-        $.ajax({
-            url: "/records/new",
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-                "album": $("#album").val(),
-                "artist": $("#artist").val(),
-                "year": $("#year").val(),
-                "genre": $("#genre").val(),
-            })})
-            .done(function(data) {
-                records.push(data);
-                $("input").val("").trigger("keyup");
-                renderRecords(records);
-            })
-            .fail(function() {
-                $(".pure-form .error").show({duration: 400}).delay(3000).hide({duration: 400});
-            })
-            .always(function() {
-                $(".loader-small").remove();
-            });
-    });
 });
