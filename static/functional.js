@@ -73,6 +73,8 @@ $(function() {
         })
         .doAction(resetForm);
 
+    var addedRecords = addedRecord.scan([], ".concat");
+
     var validAlbum = album
         .combine(records, function(album, records) {
             if(!album) return true;
@@ -110,14 +112,7 @@ $(function() {
     addedRecord.map(Boolean).not().mapError(Boolean)
         .assign($("#add-record .error"), "toggle");
 
-    //TODO: Nye records overskriver gamle
-
-    var allRecords = addedRecord.flatMapLatest(function(val) {
-        return Bacon.constant(val);
-    });
-
-    // records.combine(constantRecord, ".concat").log()
-
-    records.combine(recordFilter, filterRecords)
+    records.combine(addedRecords, ".concat")
+        .combine(recordFilter, filterRecords)
         .onValue(renderRecords);
 });
