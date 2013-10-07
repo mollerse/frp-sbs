@@ -15,9 +15,7 @@ var server = http.createServer(function(req, res) {
     }
     if(/^\/records\/new$/.test(req.url)) {
         res.setHeader('content-type', 'application/json');
-        return setTimeout(function() {
-            return req.pipe(res);
-        }, 2000);
+        return req.pipe(res);
     }
     return staticd(req, res);
 });
