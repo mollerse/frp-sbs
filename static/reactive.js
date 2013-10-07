@@ -1,17 +1,9 @@
 $(function() {
-    var records, validAlbum, validArtist, validYear, validGenre;
-
-    $.ajax("/records")
-        .done(function(data) {
-            records = data;
-            renderRecords(records);
-        })
-        .fail(function() {
-            $("#records .error").show({duration: 400});
-        })
-        .always(function() {
-            $("#records .loader").remove();
-        });
+    var records = [],
+        validAlbum = false,
+        validArtist = false,
+        validYear = false,
+        validGenre = false;
 
     var renderRecords = function(records) {
         var items = _.reduce(records, function(acc, record) {
@@ -25,72 +17,84 @@ $(function() {
         $("#records ul").html(items);
     };
 
+    var filterRecords = function(filter) {
+        return _.filter(records, function(record) {
+            return _(record).values().any(testRegex(filter));
+        });
+    };
+
+    var testRegex = function(pattern) {
+        return function(value) {
+            if(!value) return false;
+            return new RegExp(pattern, "i").test(value);
+        };
+    };
+
+    var mapToInputIcon = function(selector, validityChecker) {
+        var value = $(selector).val();
+        if(!value) {
+            $(selector + "+ i").attr("class", "icon-asterisk");
+            return false;
+        } else if(validityChecker(value)) {
+            $(selector + "+ i").attr("class", "icon-ok");
+            return true;
+        } else {
+            $(selector + "+ i").attr("class", "icon-warning-sign");
+            return false;
+        }
+    };
+
+    var resetForm = function() {
+        $("#add-record input").val("").trigger("keyup");
+    };
+
+    $.ajax("/records")
+        .done(function(data) {
+            records = data;
+            renderRecords(records);
+        })
+        .fail(function() {
+            $("#records .error").show();
+        })
+        .always(function() {
+            $("#records .loader").toggle(false);
+        });
+
+
     $("#filter").on("keyup", function() {
-        var filter = new RegExp($(this).val(), "i");
-        renderRecords(_.filter(records, function(record) {
-            return _(record).values().any(function(value) {
-                return filter.test(value);
-            });
-        }));
+        renderRecords(filterRecords($(this).val()));
     });
 
     $("#album").on("keyup", function() {
-        var value = $(this).val();
-        if (!value) {
-            $("#album + i").attr("class", "icon-asterisk");
-            validAlbum = false;
-        } else if (_.any(records, {"album": value})) {
-            $("#album + i").attr("class", "icon-warning-sign");
-            validAlbum = false;
-        } else {
-            $("#album + i").attr("class", "icon-ok");
-            validAlbum = true;
-        }
+        validAlbum = mapToInputIcon("#album", function(value) {
+            return !_.any(records, {"album": value});
+        });
     });
 
     $("#artist").on("keyup", function() {
-        var value = $(this).val();
-        if (!value) {
-            $("#artist + i").attr("class", "icon-asterisk");
-            validArtist = false;
-        } else {
-            $("#artist + i").attr("class", "icon-ok");
-            validArtist = true;
-        }
+        validArtist = mapToInputIcon("#artist", function(value) {
+            return true;
+        });
     });
 
     $("#year").on("keyup", function() {
-        var value = $(this).val();
-        if (!value) {
-            $("#year + i").attr("class", "icon-asterisk");
-            validYear = false;
-        } else if (/^\d{4}$/.test(value)) {
-            $("#year + i").attr("class", "icon-ok");
-            validYear = true;
-        } else {
-            $("#year + i").attr("class", "icon-warning-sign");
-            validYear = false;
-        }
+        validYear = mapToInputIcon("#year", testRegex("^\\d{4}$"));
     });
 
     $("#genre").on("keyup", function() {
-        var value = $(this).val();
-        if (!value) {
-            $("#genre + i").attr("class", "icon-asterisk");
-            validGenre = false;
-        } else {
-            $("#genre + i").attr("class", "icon-ok");
-            validGenre = true;
-        }
+        validGenre = mapToInputIcon("#genre", function(value) {
+            return true;
+        });
     });
 
-    $("input").on("keyup", function() {
-        $("[type=submit]").attr("disabled", !(validAlbum && validArtist && validYear && validGenre));
+    $("#add-record input").on("keyup", function() {
+        var valid = validAlbum && validArtist && validYear && validGenre;
+        $("[type=submit]").attr("disabled", !valid);
     });
 
     $("[type=submit]").on("click", function(event) {
         event.preventDefault();
-        $(this).append("<div class='loader-small'></div>");
+        $(".loader-small").toggle(true);
         $.ajax({
             url: "/records/new",
             type: "POST",
@@ -103,14 +107,14 @@ $(function() {
             })})
             .done(function(data) {
                 records.push(data);
-                $("input").val("").trigger("keyup");
-                renderRecords(records);
+                resetForm();
+                renderRecords(filterRecords($("#filter").val()));
             })
             .fail(function() {
-                $(".pure-form .error").show({duration: 400}).delay(3000).hide({duration: 400});
+                $("#add-record .error").show();
             })
             .always(function() {
-                $(".loader-small").remove();
+                $(".loader-small").toggle(false);
             });
     });
 });

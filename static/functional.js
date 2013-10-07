@@ -1,8 +1,4 @@
 $(function() {
-
-    /*
-        SOME CONVENIENCE FUNCTIONS
-    */
     var renderRecords = function(records) {
         return _.reduce(records, function(acc, record) {
             return acc + "<li>" +
@@ -27,6 +23,18 @@ $(function() {
         };
     };
 
+    var mapToInputIcon = function(input, valid) {
+        return input.combine(valid, function(input, valid) {
+            if(!input) return "icon-asterisk";
+            if(!valid) return "icon-warning-sign";
+            return "icon-ok";
+        });
+    };
+    
+    var resetForm = function() {
+        $("#add-record input").val("").trigger("keyup");
+    };
+
     var propertyFromInput = function(field) {
         var value = function(event) {
             return event.currentTarget.value;
@@ -35,22 +43,6 @@ $(function() {
             .map(value)
             .toProperty("");
     };
-
-    var resetForm = function() {
-        $("#add-record input").val("").trigger("keyup");
-    };
-
-    var mapToInputIcon = function(input, valid) {
-        return input.combine(valid, function(input, valid) {
-            if(!input) return "icon-asterisk";
-            if(!valid) return "icon-warning-sign";
-            return "icon-ok";
-        });
-    };
-
-    /*
-        THE SOURCES
-    */
 
     var records = Bacon.fromPromise($.ajax("/records"));
 
@@ -81,10 +73,6 @@ $(function() {
         })
         .doAction(resetForm);
 
-    /*
-        SOME CONVENIENCE VALUES
-    */
-
     var addedRecords = addedRecord.scan([], ".concat");
 
     var validAlbum = album
@@ -97,18 +85,12 @@ $(function() {
     var validYear = year.map(testRegex("^\\d{4}$"));
     var validGenre = genre.map(Boolean);
 
-    /*
-        ASSIGN VALUES TO THE GUI
-    */
-
-    //Show spinner while fetching records
     records.map(Boolean).mapError(Boolean).not()
         .assign($("#records .loader"), "toggle");
-    //Show errormessage if fetching records failed
+
     records.map(Boolean).not().mapError(Boolean)
         .assign($("#records .error"), "toggle");
 
-    //Show validity-icon next to the input fields
     mapToInputIcon(album, validAlbum)
         .assign($("#album + i"), "attr", "class");
 
@@ -117,24 +99,20 @@ $(function() {
 
     mapToInputIcon(year, validYear)
         .assign($("#year + i"), "attr", "class");
-        
+
     mapToInputIcon(genre, Bacon.constant(true))
         .assign($("#genre + i"), "attr", "class");
 
-    //Toggle the add-button
     validAlbum.and(validArtist).and(validYear).and(validGenre).not()
         .assign($("[type=submit]"), "attr", "disabled");
 
-    //Show spinner while adding record
     addedRecord.map(Boolean).mapError(Boolean).not()
         .merge(add.map(Boolean))
         .assign($(".loader-small"), "toggle");
 
-    //Show errormessage if adding failed
     addedRecord.map(Boolean).not().mapError(Boolean)
         .assign($("#add-record .error"), "toggle");
 
-    //Show all the filtered records as a list
     records.combine(addedRecords, ".concat")
         .combine(recordFilter, filterRecords)
         .map(renderRecords)
