@@ -1,10 +1,16 @@
 # Step by Step: From Reactive Programming to Functional Reactive Programming
 
-This blogpost will be a side by side comparison of the same application implemented 
-in both traditional reactive programming and functional reactive programming (FRP). 
-If you are not familiar with functional reactive programming, I suggest you go read 
-[Making a Collaborative Piano Using Functional Reactive Programming](open.bekk.no/making-a-collaborative-piano-using-functional-reactive-programming-frp) for an introduction to the 
-concept of FRP.
+For this blogpost I will implement the same application using two different programming 
+techniques; Reactive Programming and Functional Reactive Programming (FRP). Reactive 
+Programming should be familiar to anyone who has done javascript, either in the browser 
+or on the server in the form of Node.js. FRP might be unfamiliar to most of you, so I 
+recommend reading [Making a Collaborative Piano Using Functional Reactive Programming](open.bekk.no/making-a-collaborative-piano-using-functional-reactive-programming-frp) 
+as it is a good introduction to the concept.
+
+I will go through each implementation step by step for both techniques and do some 
+comparison of the two towards the end. A demo of the application is available 
+[here](http://frp-sbs.herokuapp.com). I suggest taking it for a spin now 
+and keep it around for reference as we go through the implementation details.
 
 ## The Application
 But before we get down to business, we will need to define our application. The application 
@@ -28,10 +34,6 @@ This looks like a fairly simple task. Lets implement it using the familiar jQuer
 To make the implementation more in line with current best practices in frontend JavaScript 
 code, lets add some functional programming from the LoDash liberary.
 
-A demo of the application is available [here](http://frp-sbs.herokuapp.com). I suggest 
-taking it for a spin now and keep it around for reference as we go through the 
-implementation details.
-
 ## The Reactive Programming Implementation
 
 First thing we need is to fetch the record collection from the server when we load the page. 
@@ -53,13 +55,15 @@ We can do this using the excellent promise-based AJAX API in jQuery:
         });
 ```
 
-This is familiar stuff to anyone that has done any AJAX in the browser, and the promises 
-interface makes it very clean. If the AJAX-request succeeds, we set the data received to be 
-the current record collection and render it. If the AJAX-request fails to get the record 
-collection from the server, we show an error-message. Regardless of wether the request succeed or fail, we hide the spinner that indicates a pending request.
+This is familiar stuff to anyone that has done any AJAX-requests in the browser. The 
+promises interface makes it very clean. If the request succeeds, we set the data 
+received to be the current record collection and render it. If the request fails to 
+get the record collection from the server, we show an error-message. Regardless of 
+wether the request succeed or fail, we hide the spinner that indicates a pending 
+request.
 
-To render the record collection we reduce the records to a string of markup and insert it 
-into the DOM:
+To render the record collection we reduce the records to a string of markup and insert 
+it into the DOM:
 
 ```javascript
     var renderRecords = function(records) {
@@ -222,3 +226,213 @@ using functional reactive programming (FRP)!
 
 ## The Functional Reactive Programming Implementation
 
+To implement the application using functional reactive programming we will use bacon.js. 
+I recommend taking a look at the [documentation](https://github.com/baconjs/bacon.js) 
+and have a quick read through of the API bacon.js offers. I will not go into detail with 
+every method I use from the API, so I suggest keeping the docs at hand while reading on.
+
+Because FRP is different from reactive programming in its approach to implementation the 
+steps in this implementation will not line up with the steps in the previous implementation. 
+Without further ado, let us begin.
+
+The first step when implementing a user interface with FRP is to define the sources of 
+events and data in the interface. In this application we have the following sources:
+
+- Existing records from the server
+- Input for the filter
+- Four inputs in the form for adding new records
+- Button for sending a new record to the server
+- The added record received from the server
+
+The first source of data is the AJAX-request we send to the server in order to fetch the 
+existing record collection. Because a jQuery AJAX-request is based on promises, we use bacon.js' `Bacon.fromPromise` to create an `EventStream` of the request.
+
+```javascript
+var records = Bacon.fromPromise($.ajax("/records"));
+```
+
+Next we have the filter and the inputs in the new record form. These will be represented as 
+properties, which is the bacon.js way of representing continous values. In addition we will 
+need a property representing a record, which is the aggregation of the individual properties 
+from the form.
+
+```javascript
+    var propertyFromInput = function(field) {
+        var value = function(event) {
+            return event.currentTarget.value;
+        };
+        return Bacon.fromEventTarget(field, "keyup")
+            .map(value)
+            .toProperty("");
+    };
+
+    var recordFilter = propertyFromInput($("#filter"));
+    
+    var album = propertyFromInput($("#album"));
+    var artist = propertyFromInput($("#artist"));
+    var year = propertyFromInput($("#year"));
+    var genre = propertyFromInput($("#genre"));
+
+    var record = Bacon.combineTemplate({
+            "album": album,
+            "artist": artist,
+            "year": year,
+            "genre": genre,
+    });
+```
+
+The button for triggering the addition of a new record is perhaps the most familiar piece of code, if you have read introductions to FRP before.
+
+```javascript
+    var add = Bacon.fromEventTarget($("[type=submit]"), "click")
+            .doAction(".preventDefault");
+```
+
+The last source of data in this application is the AJAX-request which posts the added record 
+to the server and receives it back. In addition we want to collect all added records in a 
+list so we can combine it with the existing records we received from the server. To do so, we use a scanner.
+
+```javascript
+    var addedRecord = record.sampledBy(add)
+        .flatMapLatest(function(record) {
+           return Bacon.fromPromise($.ajax({
+                "url": "/records/new",
+                "type": "POST",
+                "data": JSON.stringify(record)
+            }));
+        })
+        .doAction(resetForm);
+
+    var addedRecords = addedRecord.scan([], ".concat");
+```
+
+This is perhaps the most complicated piece of code in this implementation, so I will take a 
+moment to step through it. The first thing we do is to take a snapshot of the value of the 
+record-property when we get an event from the add-button. Then we take that value and 
+prepare an AJAX-request with the value as the body. Since `Bacon.fromPromise` also returns a 
+new event stream and we do not want to deal with nested handlers, we use `flatMapLatest` to 
+get the latest event stream created, which is the response from the server. It is worth 
+mentioning here that error-events will pass through normal handlers so that the form will 
+not be reset if the request should fail.
+
+The second step in implementing a user interface using FRP is to declare the relationships 
+between the event and data sources and the various other elements of the user interface. 
+In this application we have the following elements:
+
+- A spinner to indicate a pending request for the exisiting record collection
+- An error-message if fetching the existing record collection fails
+- Icons visualizing the validity of the input fields in the new record form
+- The enabeling of the add-button
+- A spinner to indicate a pending request to add a new record to the collection
+- An error-message if adding the new record failed
+- A filtered view of the existing record collection and all the added records
+
+First up is the spinner that indicates the pending request for the existing record 
+collection. We only want to display it while a request is pending and hide it when we 
+receive data, either records or an error.
+
+```javascript
+    records.map(Boolean).mapError(Boolean).not()
+        .assign($("#records .loader"), "toggle");
+```
+
+Mapping both data and errors to Boolean values, any truthy value becomes true and any falsy 
+value becomes false, and assigning it to the function `toggle` on the jQuery-object 
+representing the spinner. Passing the values through `not()` is done because we want to hide 
+the spinner if any data is returned from the server.
+
+We want to display an error-message when we get an error from the server and keep it hidden 
+when we get other data. We do this in the same way as with the spinner.
+
+```javascript
+    records.map(Boolean).not().mapError(Boolean)
+        .assign($("#records .error"), "toggle");
+```
+
+For the input-field icons we need a bit more code. Similar to the reactive implementation, 
+we need variables to represent the validity of the input field. However, in this 
+implementation, rather than assigning the value of the validity we declare it as a 
+relationship between the property representing the value and some validity criteria.
+
+```javascript
+    var validAlbum = album
+        .combine(records, function(album, records) {
+            if(!album) return true;
+            return _.any(records,{"album": album});
+        })
+        .not();
+    var validArtist  = artist.map(Boolean);
+    //The testRegex method is the same as the previous implementation
+    var validYear = year.map(testRegex("^\\d{4}$"));
+    var validGenre = genre.map(Boolean);
+```
+
+Next we map the value of the property to the corresponding icon-class and assign it to the 
+correct element.
+
+```javascript
+    var mapToInputIcon = function(input, valid) {
+        return input.combine(valid, function(input, valid) {
+            if(!input) return "icon-asterisk";
+            if(!valid) return "icon-warning-sign";
+            return "icon-ok";
+        });
+    };
+
+    mapToInputIcon(album, validAlbum)
+        .assign($("#album + i"), "attr", "class");
+
+    mapToInputIcon(artist, Bacon.constant(true))
+        .assign($("#artist + i"), "attr", "class");
+
+    mapToInputIcon(year, validYear)
+        .assign($("#year + i"), "attr", "class");
+
+    mapToInputIcon(genre, Bacon.constant(true))
+        .assign($("#genre + i"), "attr", "class");
+```
+
+Because we decleared the validity separatly, we will not have to do assignment as a part of 
+the mapping-function.
+
+To enable the add-button when all the fields in the form are valid, we just declare a 
+relationship between the validity of the input-fields and the `disabled` property of the 
+correct element.
+
+```javascript
+    validAlbum.and(validArtist).and(validYear).and(validGenre).not()
+        .assign($("[type=submit]"), "attr", "disabled");
+```
+
+Again we pass the value through `not()` because we want it not to be disabled when all the 
+fields are valid.
+
+For the AJAX-request for posting new records to the server we want to display a spinner, like with the other AJAX-request for fetching the existing record collection. We have a twist here though, which is that we only want to display it after we have pushed the add-button and the response is still pending.
+
+```javascript
+    addedRecord.map(Boolean).mapError(Boolean).not()
+        .merge(add.map(Boolean))
+        .assign($(".loader-small"), "toggle");
+```
+
+The relationship between the add record request and the error-message for the request is the same as with the request for existing records.
+
+```javascript
+    addedRecord.map(Boolean).not().mapError(Boolean)
+        .assign($("#add-record .error"), "toggle");
+```
+
+Finally we want to display the filtered combination between the existing record collection and all the added records. So we declare the relationship between the existing records, the added records and the filter and assign it to the correct element in the interface.
+
+```javascript
+    records.combine(addedRecords, ".concat")
+        .combine(recordFilter, filterRecords)
+        .map(renderRecords)
+        .assign($("#records ul"), "html");
+```
+
+The `filterRecords` and `renderRecords` functions are mostly the same as the reactive implementations, minus DOM insertion in `renderRecords` and a small change to the signature of `filterRecords`.
+
+We have now implemented the same functionality using FRP. The source is available in its entirety [here](https://github.com/mollerse/frp-sbs/blob/master/static/functional.js).
+
+## Comparison

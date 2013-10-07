@@ -46,9 +46,6 @@ $(function() {
 
     var records = Bacon.fromPromise($.ajax("/records"));
 
-    var add = Bacon.fromEventTarget($("[type=submit]"), "click")
-            .doAction(".preventDefault");
-
     var recordFilter = propertyFromInput($("#filter"));
     
     var album = propertyFromInput($("#album"));
@@ -62,6 +59,9 @@ $(function() {
             "year": year,
             "genre": genre,
     });
+
+    var add = Bacon.fromEventTarget($("[type=submit]"), "click")
+            .doAction(".preventDefault");
 
     var addedRecord = record.sampledBy(add)
         .flatMapLatest(function(record) {
