@@ -10,17 +10,17 @@ $(function() {
         }, "");
     };
 
-    var filterRecords = function(records, recordFilter) {
-        return _.filter(records, function(record) {
-            return _(record).values().any(testRegex(recordFilter));
-        });
-    };
-
     var testRegex = function(pattern) {
         return function(value) {
             if(!value) return false;
             return new RegExp(pattern, "i").test(value);
         };
+    };
+
+    var filterRecords = function(records, recordFilter) {
+        return _.filter(records, function(record) {
+            return _(record).values().any(testRegex(recordFilter));
+        });
     };
 
     var mapToInputIcon = function(input, valid) {

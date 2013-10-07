@@ -9,7 +9,7 @@ $(function() {
         var items = _.reduce(records, function(acc, record) {
             return acc + "<li>" +
                 "<h3>" + record.album + "</h3>" +
-                "<p> Artist: " + record.artist + "</p>" +
+                "<p>Artist: " + record.artist + "</p>" +
                 "<p>Year: " + record.year + "</p>" +
                 "<p>Genre: " + record.genre + "</p>" +
                 "</li>";
@@ -17,17 +17,17 @@ $(function() {
         $("#records ul").html(items);
     };
 
-    var filterRecords = function(filter) {
-        return _.filter(records, function(record) {
-            return _(record).values().any(testRegex(filter));
-        });
-    };
-
     var testRegex = function(pattern) {
         return function(value) {
             if(!value) return false;
             return new RegExp(pattern, "i").test(value);
         };
+    };
+
+    var filterRecords = function(filter) {
+        return _.filter(records, function(record) {
+            return _(record).values().any(testRegex(filter));
+        });
     };
 
     var mapToInputIcon = function(selector, validityChecker) {
@@ -54,7 +54,7 @@ $(function() {
             renderRecords(records);
         })
         .fail(function() {
-            $("#records .error").show();
+            $("#records .error").toggle(true);
         })
         .always(function() {
             $("#records .loader").toggle(false);
@@ -62,7 +62,8 @@ $(function() {
 
 
     $("#filter").on("keyup", function() {
-        renderRecords(filterRecords($(this).val()));
+        var filter = $(this).val();
+        renderRecords(filterRecords(filter));
     });
 
     $("#album").on("keyup", function() {
@@ -72,9 +73,7 @@ $(function() {
     });
 
     $("#artist").on("keyup", function() {
-        validArtist = mapToInputIcon("#artist", function(value) {
-            return true;
-        });
+        validArtist = mapToInputIcon("#artist", _.identity);
     });
 
     $("#year").on("keyup", function() {
@@ -82,9 +81,7 @@ $(function() {
     });
 
     $("#genre").on("keyup", function() {
-        validGenre = mapToInputIcon("#genre", function(value) {
-            return true;
-        });
+        validGenre = mapToInputIcon("#genre", _.identity);
     });
 
     $("#add-record input").on("keyup", function() {
@@ -95,6 +92,7 @@ $(function() {
     $("[type=submit]").on("click", function(event) {
         event.preventDefault();
         $(".loader-small").toggle(true);
+        $("#add-record .error").toggle(false);
         $.ajax({
             url: "/records/new",
             type: "POST",
@@ -111,7 +109,7 @@ $(function() {
                 renderRecords(filterRecords($("#filter").val()));
             })
             .fail(function() {
-                $("#add-record .error").show();
+                $("#add-record .error").toggle(true);
             })
             .always(function() {
                 $(".loader-small").toggle(false);

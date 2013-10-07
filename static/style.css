@@ -8,7 +8,6 @@ body {
 
 .error {
   color: rgb(202, 60, 60);
-  display: none;
 }
 
 .loader {
