@@ -17,7 +17,7 @@ To achieve this functionality, there are a few things we need to implement:
 
 - Fetching records from a server
 - Listing records in the collection
-- Filtering the records (it could be a large database)
+- A way to filter the viewed records
 - Adding a new record to the collection
 - Informing the user wether the data entered is valid
 - Sending the new record to the server for verification
