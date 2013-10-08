@@ -1,16 +1,17 @@
 # Step by Step: From Reactive Programming to Functional Reactive Programming
 
-For this blogpost I will implement the same application using two different programming 
-techniques; Reactive Programming and Functional Reactive Programming (FRP). Reactive 
-Programming should be familiar to anyone who has done javascript, either in the browser 
-or on the server in the form of Node.js. FRP might be unfamiliar to most of you, so I 
-recommend reading [Making a Collaborative Piano Using Functional Reactive Programming](open.bekk.no/making-a-collaborative-piano-using-functional-reactive-programming-frp) 
-as it is a good introduction to the concept.
+The goal of this blogpost is to implement the same application using two different 
+programming techniques; Reactive Programming and Functional Reactive Programming (FRP). 
+And then compare some key differences between the two techniques.
 
-I will go through each implementation step by step for both techniques and do some 
-comparison of the two towards the end. A demo of the application is available 
-[here](http://frp-sbs.herokuapp.com). I suggest taking it for a spin now 
-and keep it around for reference as we go through the implementation details.
+Reactive Programming should be familiar to anyone who has done javascript, either in the 
+browser or on the server in the form of Node.js. FRP, on the other hand, might be unfamiliar 
+to most of you, so I recommend reading [Making a Collaborative Piano Using Functional 
+Reactive Programming](open.bekk.no/making-a-collaborative-piano-using-functional-reactive-programming-frp) as it is a good introduction to the concept.
+
+I will go through the implementation step by step for both techniques and a demo of the 
+application is available [here](http://frp-sbs.herokuapp.com). I suggest taking it for a 
+spin now and keep it around for reference as we go through the implementation details.
 
 ## The Application
 But before we get down to business, we will need to define our application. The application 
@@ -55,7 +56,7 @@ We can do this using the excellent promise-based AJAX API in jQuery:
         });
 ```
 
-This is familiar stuff to anyone that has done any AJAX-requests in the browser. The 
+This is familiar stuff to anyone that has done any AJAX-requests in the browser and the 
 promises interface makes it very clean. If the request succeeds, we set the data 
 received to be the current record collection and render it. If the request fails to 
 get the record collection from the server, we show an error-message. Regardless of 
@@ -178,7 +179,8 @@ I am going to let it pass.
     });
 ```
 We are now using four different values to track the validity of the new record we wish to 
-add to the collection, which are all changing when the user enters new values into the corresponding input field. Again we have the same pattern of reacting to events.
+add to the collection, which are all changing when the user enters new values into the 
+corresponding input field. Again we have the same pattern of reacting to events.
 
 The final piece of functionality we want is sending the new record to the server for final 
 verification.
@@ -217,7 +219,11 @@ verification.
 ```
 
 Again we use the promises interface from jQuery's AJAX-API. As we are preparing the 
-AJAX-request we collect the current values of the form. And as with the previous AJAX-request, we toggle the visibility of a spinner and a potential error-message based on the current state of the request. If the server returns the record to us, we reset the form and re-render the record collection. As a nice-to-have, we let the current active filter stay active.
+AJAX-request we collect the current values of the form. And as with the previous 
+AJAX-request, we toggle the visibility of a spinner and a potential error-message based on 
+the current state of the request. If the server returns the record to us, we reset the form 
+and re-render the record collection. As a nice-to-have, we let the current active filter 
+stay active.
 
 You can view the source in its entirety 
 [here](https://github.com/mollerse/frp-sbs/blob/master/static/reactive.js). 
@@ -245,7 +251,8 @@ events and data in the interface. In this application we have the following sour
 - The added record received from the server
 
 The first source of data is the AJAX-request we send to the server in order to fetch the 
-existing record collection. Because a jQuery AJAX-request is based on promises, we use bacon.js' `Bacon.fromPromise` to create an `EventStream` of the request.
+existing record collection. Because a jQuery AJAX-request is based on promises, we use 
+bacon.js' `Bacon.fromPromise` to create an `EventStream` of the respone.
 
 ```javascript
 var records = Bacon.fromPromise($.ajax("/records"));
@@ -281,7 +288,8 @@ from the form.
     });
 ```
 
-The button for triggering the addition of a new record is perhaps the most familiar piece of code, if you have read introductions to FRP before.
+The button for triggering the addition of a new record is perhaps the most familiar piece of 
+code, if you have read introductions to FRP or other blogposts about FRP before.
 
 ```javascript
     var add = Bacon.fromEventTarget($("[type=submit]"), "click")
@@ -290,7 +298,8 @@ The button for triggering the addition of a new record is perhaps the most famil
 
 The last source of data in this application is the AJAX-request which posts the added record 
 to the server and receives it back. In addition we want to collect all added records in a 
-list so we can combine it with the existing records we received from the server. To do so, we use a scanner.
+list so we can combine it with the existing records we received from the server. To do so, 
+we use a scanner.
 
 ```javascript
     var addedRecord = record.sampledBy(add)
@@ -304,6 +313,7 @@ list so we can combine it with the existing records we received from the server.
         .doAction(resetForm);
 
     var addedRecords = addedRecord.scan([], ".concat");
+    var allRecords = records.combine(addedRecords, ".concat");
 ```
 
 This is perhaps the most complicated piece of code in this implementation, so I will take a 
@@ -356,7 +366,7 @@ relationship between the property representing the value and some validity crite
 
 ```javascript
     var validAlbum = album
-        .combine(records, function(album, records) {
+        .combine(allRecords, function(album, records) {
             if(!album) return true;
             return _.any(records,{"album": album});
         })
@@ -407,7 +417,10 @@ correct element.
 Again we pass the value through `not()` because we want it not to be disabled when all the 
 fields are valid.
 
-For the AJAX-request for posting new records to the server we want to display a spinner, like with the other AJAX-request for fetching the existing record collection. We have a twist here though, which is that we only want to display it after we have pushed the add-button and the response is still pending.
+For the AJAX-request for posting new records to the server we want to display a spinner, 
+like with the other AJAX-request for fetching the existing record collection. We have a 
+twist here though, which is that we only want to display it after we have pushed the 
+add-button and the response is still pending.
 
 ```javascript
     addedRecord.map(Boolean).mapError(Boolean).not()
@@ -415,24 +428,94 @@ For the AJAX-request for posting new records to the server we want to display a 
         .assign($(".loader-small"), "toggle");
 ```
 
-The relationship between the add record request and the error-message for the request is the same as with the request for existing records.
+The relationship between the add record request and the error-message for the request is the 
+same as with the request for existing records.
 
 ```javascript
     addedRecord.map(Boolean).not().mapError(Boolean)
         .assign($("#add-record .error"), "toggle");
 ```
 
-Finally we want to display the filtered combination between the existing record collection and all the added records. So we declare the relationship between the existing records, the added records and the filter and assign it to the correct element in the interface.
+Finally we want to display the filtered combination between the existing record collection 
+and all the added records. So we declare the relationship between the existing records, the 
+added records and the filter and assign it to the correct element in the interface.
 
 ```javascript
+    allRecords
+        .combine(recordFilter, filterRecords)
+        .map(renderRecords)
+        .assign($("#records ul"), "html");
+```
+
+The `filterRecords` and `renderRecords` functions are mostly the same as the reactive 
+implementations, minus DOM insertion in `renderRecords` and a small change to the signature 
+of `filterRecords`.
+
+We have now implemented the same functionality using FRP. The source is available in its 
+entirety [here](https://github.com/mollerse/frp-sbs/blob/master/static/functional.js).
+
+## Comparison
+
+The perhaps most apparent difference between the two techniques is in how the central 
+building block handled. For the reactive implementation, everything is structured around 
+which events a piece of the interface can trigger. Relations between the events that are 
+happening and the data passed around is kept within each event handler. This forces us to 
+sometimes handle state outside the handlers in order to create composite interaction. This 
+is especially visible with the validity of the inputs in the form to create a new record.
+
+In the FRP implementation our building blocks are, like the reactive implementation, the 
+various sources of events, but with one crucial difference. Instead of writing handlers for 
+the events in an imperative way, we can decleare relationships between the sources and 
+between the sources and other elements of the interface. Where we had to wrangle state 
+explicitly in the reactive implementation of the validity of the inputs, we can just declare 
+how the validity functions relate to eachother and to the add-button. 
+
+The same effect can also be seen with the relationship between the existing record 
+collection, the added records and the filter. In the reactive implementation we manually 
+maintain the state of the record collection and change the view whenever the filter changes. 
+We actually call the render function, that also assigns the filtered record collection to 
+the interface, from three different places in the code.
+
+```javascript
+    #Some implementation details omitted for clarity
+
+    $.ajax("/records")
+        .done(function(data) {
+            records = data;
+            renderRecords(records);
+        })
+
+    $("#filter").on("keyup", function() {
+        renderRecords(filterRecords($(this).val()));
+    });
+
+    $.ajax({"/records/new"})
+        .done(function(data) {
+            records.push(data);
+            renderRecords(filterRecords($("#filter").val()));
+        });
+```
+
+In the FRP implementation we instead declare a relationship between the three sources. We 
+avoid the manual handling of the state of the record collection. And we only call the render 
+function from one place and we have separated the generation of html from the assignment to 
+the correct interface element.
+
+```javascript
+    #Some implementation details omitted for clarity
+
     records.combine(addedRecords, ".concat")
         .combine(recordFilter, filterRecords)
         .map(renderRecords)
         .assign($("#records ul"), "html");
 ```
 
-The `filterRecords` and `renderRecords` functions are mostly the same as the reactive implementations, minus DOM insertion in `renderRecords` and a small change to the signature of `filterRecords`.
+This one example is perhaps a bit unfair to the reactive implementation though, we did 
+actually write more code in the FRP implementation. However, of one of the strengths of FRP 
+lies in the ability to reuse sources once they have been declared. 
 
-We have now implemented the same functionality using FRP. The source is available in its entirety [here](https://github.com/mollerse/frp-sbs/blob/master/static/functional.js).
-
-## Comparison
+Say that we wanted to display the three newest additions to the record collection in a 
+separate place in the interface. Imagine how much code we would have to write and rewrite if 
+we wanted to do this in the reactive implementation. For the FRP implementation we would not 
+have to do much handling. Since we already have the source it would just be a matter of 
+expressing the relationship.
