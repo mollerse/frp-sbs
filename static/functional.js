@@ -74,9 +74,10 @@ $(function() {
         .doAction(resetForm);
 
     var addedRecords = addedRecord.scan([], ".concat");
+    var allRecords = records.combine(addedRecords, ".concat");
 
     var validAlbum = album
-        .combine(records, function(album, records) {
+        .combine(allRecords, function(album, records) {
             if(!album) return true;
             return _.any(records,{"album": album});
         })
@@ -113,7 +114,7 @@ $(function() {
     addedRecord.map(Boolean).not().mapError(Boolean)
         .assign($("#add-record .error"), "toggle");
 
-    records.combine(addedRecords, ".concat")
+    allRecords
         .combine(recordFilter, filterRecords)
         .map(renderRecords)
         .assign($("#records ul"), "html");
