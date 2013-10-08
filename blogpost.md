@@ -519,3 +519,11 @@ separate place in the interface. Imagine how much code we would have to write an
 we wanted to do this in the reactive implementation. For the FRP implementation we would not 
 have to do much handling. Since we already have the source it would just be a matter of 
 expressing the relationship.
+
+## Closing Remarks
+I did not want to turn this blogpost into a very opinionated piece, but rather show how the 
+two techniques would look when implementing the exact same functionality. I will, however, 
+say that FRP opens a new level of abstraction to the developer. This new level of 
+abstraction is one that, in my opinion, is closer to how we reason about interfaces. And 
+that is something I like very much. I will definitely pay close attention to the direction 
+the field of FRP will take and the impact it will have on user interface code.
