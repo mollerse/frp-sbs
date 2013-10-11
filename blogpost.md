@@ -1,17 +1,16 @@
-# Step by Step: From Reactive Programming to Functional Reactive Programming
+# Step by Step: Event Driven Programming and Functional Reactive Programming
 
-The goal of this blogpost is to implement the same application using two different 
-programming techniques; Reactive Programming and Functional Reactive Programming (FRP). 
-And then compare some key differences between the two techniques.
+The aim of this blogpost is to explore the differences between Event Driven Programming and Functional Reactive Programming(FRP) by implementing the same set of functionality with both techinques. These two techinques, while sharing many things, offer quite different sets of tools to the developer. 
 
-Reactive Programming should be familiar to anyone who has done javascript, either in the 
-browser or on the server in the form of Node.js. FRP, on the other hand, might be unfamiliar 
-to most of you, so I recommend reading [Making a Collaborative Piano Using Functional 
-Reactive Programming](open.bekk.no/making-a-collaborative-piano-using-functional-reactive-programming-frp) as it is a good introduction to the concept.
+Being able to compare the two approaches with a common point of reference is useful to see which key points the two approaches differ at. And also to see how the two approaches differ in terms of process and semantics, which is often hard to get a grasp on when comparing programming techniques.
 
-I will go through the implementation step by step for both techniques and a demo of the 
-application is available [here](http://frp-sbs.herokuapp.com). I suggest taking it for a 
-spin now and keep it around for reference as we go through the implementation details.
+What this blogpost will not cover is introductory material to either approach. Event Driven Programming is probably well known to anyone who has done javascript, either in the browser or on the server. The all to familiar `.on('event', handler)` is the basis of most asyncronous code in javascript. FRP on the other hand might be unfamiliar. There are many great sources of introductions to FRP and bacon.js, the liberary I will be using in this blogpost. Some suggestions, if you want to get the basics of FRP, to look at before you read on;
+
+- [Making a Collaborative Piano Using Functional Reactive Programming](open.bekk.no/making-a-collaborative-piano-using-functional-reactive-programming-frp)
+- [Functional Reactive Programming in JavaScript](http://flippinawesome.org/2013/09/30/functional-reactive-programming-in-javascript/)
+- [Bacon.js Tutorial Part I : Hacking With jQuery](http://nullzzz.blogspot.fi/2012/11/baconjs-tutorial-part-i-hacking-with.html) (and its followups)
+
+I will walk through the two implementations step by step explaining the process as I go along. A demo of the application will be available [here](http://frp-sbs.herokuapp.com) and I suggest taking it for a spin now to get a feel for the functionality it offers. It might be handy to keep it around for reference as you read along.
 
 ## The Application
 But before we get down to business, we will need to define our application. The application 
