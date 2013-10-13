@@ -78,10 +78,9 @@ $(function() {
 
     var validAlbum = album
         .combine(allRecords, function(album, records) {
-            if(!album) return true;
-            return _.any(records,{"album": album});
-        })
-        .not();
+            if(!album) return false;
+            return !_.any(records,{"album": album});
+        });
     var validArtist  = artist.map(Boolean);
     var validYear = year.map(testRegex("^\\d{4}$"));
     var validGenre = genre.map(Boolean);
