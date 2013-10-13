@@ -11,6 +11,7 @@ What this blogpost will not cover is introductory material to either approach. E
 - [Bacon.js Tutorial Part I : Hacking With jQuery](http://nullzzz.blogspot.fi/2012/11/baconjs-tutorial-part-i-hacking-with.html) (and its followups)
 - [Bacon.js Makes Functional Reactive Programming Sizzle](http://blog.flowdock.com/2013/01/22/functional-reactive-programming-with-bacon-js/)
 - [Bacon.js API docs](https://github.com/baconjs/bacon.js)
+- [061 JSJ Functional Reactive Programming with Juha Paananen and Joe Fiorini](http://javascriptjabber.com/061-jsj-functional-reactive-programming-with-juha-paananen-and-joe-fiorini/)
 
 I will walk through the two implementations step by step explaining the process as I go along. A demo of the application will be available [here](http://frp-sbs.herokuapp.com) and I suggest taking it for a spin now to get a feel for the functionality it offers. It might be handy to keep it around for reference as you read along.
 
@@ -371,30 +372,18 @@ We have now implemented the same functionality using FRP. The source is availabl
 
 ## Comparison
 
-The perhaps most apparent difference between the two techniques is in how the central 
-building block handled. For the reactive implementation, everything is structured around 
-which events a piece of the interface can trigger. Relations between the events that are 
-happening and the data passed around is kept within each event handler. This forces us to 
-sometimes handle state outside the handlers in order to create composite interaction. This 
-is especially visible with the validity of the inputs in the form to create a new record.
+I want to discuss two key differences between the two approaches; How to handle composite behavior and how to assign new values to interface components.
 
-In the FRP implementation our building blocks are, like the reactive implementation, the 
-various sources of events, but with one crucial difference. Instead of writing handlers for 
-the events in an imperative way, we can decleare relationships between the sources and 
-between the sources and other elements of the interface. Where we had to wrangle state 
-explicitly in the reactive implementation of the validity of the inputs, we can just declare 
-how the validity functions relate to eachother and to the add-button. 
+In the event driven implementation, we had to add some state to the code in order to get behavior that depended on more than one source of data. The two examples in this application are the record collection, which is manipulated by the two AJAX-requests, and the validity checks of the input fields, which controls the enabeling of the add-button. These pieces of state are mutated from within event handlers and read from within event handlers.
 
-The same effect can also be seen with the relationship between the existing record 
-collection, the added records and the filter. In the reactive implementation we manually 
-maintain the state of the record collection and change the view whenever the filter changes. 
-We actually call the render function, that also assigns the filtered record collection to 
-the interface, from three different places in the code.
+The same two examples in the functional reactive implementation also have the same functionality, but it does not rely on explicit shared state to achieve it. Where we had to manually wrangle state in the event driven implementation, we have the power of declarative relationships in FRP. Rather than assigning value to a variable and manually updating it whenever something would cause it to change, we can declare how a value change when other values change and let the underlying mechanics handle the actual updating of the value.
+
+The other key difference is how values are assigned to the different interface components. Again we have two good examples. The first is how the value of the list that displays records change and the second is how the icons that signal the state of the input fields in the form for adding new records. In the event driven implementation we manually call the function to render the record collection list three times in three different places.
 
 ```javascript
     #Some implementation details omitted for clarity
 
-    $.ajax("/records")
+    $.ajax("/records") //GET
         .done(function(data) {
             records = data;
             renderRecords(records);
@@ -404,17 +393,15 @@ the interface, from three different places in the code.
         renderRecords(filterRecords($(this).val()));
     });
 
-    $.ajax({"/records/new"})
+    $.ajax("/records/new") //POST
         .done(function(data) {
             records.push(data);
             renderRecords(filterRecords($("#filter").val()));
         });
 ```
+This means that the list of records now has three different reasons to change, so a bug with the displaying of records could come from one of three different places. And this application is not even that complex. This is one of the reasons behind the rise of MVC-like abstractions for handling complex interfaces in frontend web development.
 
-In the FRP implementation we instead declare a relationship between the three sources. We 
-avoid the manual handling of the state of the record collection. And we only call the render 
-function from one place and we have separated the generation of html from the assignment to 
-the correct interface element.
+The same functionality is achieved in the FRP implementation like so:
 
 ```javascript
     #Some implementation details omitted for clarity
@@ -425,20 +412,13 @@ the correct interface element.
         .assign($("#records ul"), "html");
 ```
 
-This one example is perhaps a bit unfair to the reactive implementation though, we did 
-actually write more code in the FRP implementation. However, of one of the strengths of FRP 
-lies in the ability to reuse sources once they have been declared. 
+This reduces the number of times the value of the list displaying the records changes to one. This is very similar to the same benefits you get from using a model-view-abstraction and tracking change events.
 
-Say that we wanted to display the three newest additions to the record collection in a 
-separate place in the interface. Imagine how much code we would have to write and rewrite if 
-we wanted to do this in the reactive implementation. For the FRP implementation we would not 
-have to do much handling. Since we already have the source it would just be a matter of 
-expressing the relationship.
+We observe the same change in behavior with the icons visualizing the validity of the input fields, but the change is not as drastic as it was with the displaying of the record collection.
+
+There is also the benefit of a higher level of abstraction and an approach that lies closer to how we reason about interface components. The declarative nature of FRP enables us to think in terms of what we want to achieve with our interface instead of focusing on the explicit how.
+
+In addition we get the benefits of functional programming with FRP, but covering those would be a whole blogpost in its own right. Besides, there are plenty of excellent sources on that around.
 
 ## Closing Remarks
-I did not want to turn this blogpost into a very opinionated piece, but rather show how the 
-two techniques would look when implementing the exact same functionality. I will, however, 
-say that FRP opens a new level of abstraction to the developer. This new level of 
-abstraction is one that, in my opinion, is closer to how we reason about interfaces. And 
-that is something I like very much. I will definitely pay close attention to the direction 
-the field of FRP will take and the impact it will have on user interface code.
+I have only pointed to two differences in this blogpost, but there are many subtle differences that could be major for various usecases. So my suggestion to anyone wishing to spend some time studying FRP is to repeat the exercise of implementing the same application in both your preferred techinique and FRP. This blogpost has hopefully convinced you that it would be a worthwile effort.
