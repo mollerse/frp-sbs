@@ -4,20 +4,18 @@ The aim of this blogpost is to explore the differences between Event Driven Prog
 
 Being able to compare the two approaches with a common point of reference is useful to see which key points the two approaches differ at. And also to see how the two approaches differ in terms of process and semantics, which is often hard to get a grasp on when comparing programming techniques.
 
-What this blogpost will not cover is introductory material to either approach. Event Driven Programming is probably well known to anyone who has done javascript, either in the browser or on the server. The all to familiar `.on('event', handler)` is the basis of most asyncronous code in javascript. FRP on the other hand might be unfamiliar. There are many great sources of introductions to FRP and bacon.js, the liberary I will be using in this blogpost. Some suggestions, if you want to get the basics of FRP, to look at before you read on;
+What this blogpost will not cover is introductory material to either approach. Event Driven Programming is probably well known to anyone who has done javascript, either in the browser or on the server. The all to familiar `.on('event', handler)` is the basis of most asyncronous code in javascript. FRP on the other hand might be unfamiliar. There are many great sources of introductions to FRP and bacon.js, the liberary I will be using in this blogpost. Below are some suggested reads, if you want to get the basics of FRP before we get started;
 
 - [Making a Collaborative Piano Using Functional Reactive Programming](open.bekk.no/making-a-collaborative-piano-using-functional-reactive-programming-frp)
 - [Functional Reactive Programming in JavaScript](http://flippinawesome.org/2013/09/30/functional-reactive-programming-in-javascript/)
 - [Bacon.js Tutorial Part I : Hacking With jQuery](http://nullzzz.blogspot.fi/2012/11/baconjs-tutorial-part-i-hacking-with.html) (and its followups)
+- [Bacon.js Makes Functional Reactive Programming Sizzle](http://blog.flowdock.com/2013/01/22/functional-reactive-programming-with-bacon-js/)
+- [Bacon.js API docs](https://github.com/baconjs/bacon.js)
 
 I will walk through the two implementations step by step explaining the process as I go along. A demo of the application will be available [here](http://frp-sbs.herokuapp.com) and I suggest taking it for a spin now to get a feel for the functionality it offers. It might be handy to keep it around for reference as you read along.
 
 ## The Application
-But before we get down to business, we will need to define our application. The application 
-used for the comparison will be a simple record (the vinyl kind, not the data kind) 
-collection It will list out records in the collection and allow the user to add new records. 
-To ensure consistency in the collection, the application will only allow unique records and 
-valid data.
+Before we get down to the business of code, we will need to define our application. The application used for the comparison will be a simple record (the vinyl kind, not the data kind) collection It will list out records in the collection and allow the user to add new records. To ensure consistency in the collection, the application will only allow unique records and valid data.
 
 To achieve this functionality, there are a few things we need to implement:
 
@@ -30,14 +28,11 @@ To achieve this functionality, there are a few things we need to implement:
 - Receiving the new record or an error from the server
 - Adding the new record to the viewed collection
 
-This looks like a fairly simple task. Lets implement it using the familiar jQuery liberary. 
-To make the implementation more in line with current best practices in frontend JavaScript 
-code, lets add some functional programming from the LoDash liberary.
+This looks like a fairly simple task. First, let us implement it with event driven programming, using the familiar jQuery liberary. Let us also throw in some LoDash to get some nice functional handling of collections.
 
-## The Reactive Programming Implementation
+## The Event Driven Implementation
 
-First thing we need is to fetch the record collection from the server when we load the page. 
-We can do this using the excellent promise-based AJAX API in jQuery:
+First thing we need is to fetch the record collection from the server when we load the page. We can do this using the excellent promise-based AJAX API in jQuery:
 
 ```javascript
     var records = [];
@@ -55,34 +50,26 @@ We can do this using the excellent promise-based AJAX API in jQuery:
         });
 ```
 
-This is familiar stuff to anyone that has done any AJAX-requests in the browser and the 
-promises interface makes it very clean. If the request succeeds, we set the data 
-received to be the current record collection and render it. If the request fails to 
-get the record collection from the server, we show an error-message. Regardless of 
-wether the request succeed or fail, we hide the spinner that indicates a pending 
-request.
+This is familiar stuff to anyone that has done AJAX-requests in the browser and the promises interface makes it very clean. If the request succeeds, we set the data received to be the current record collection and render it. If the request fails to get the record collection from the server, we show an error-message. Regardless of wether the request succeed or fail, we hide the spinner that indicates a pending request.
 
-To render the record collection we reduce the records to a string of markup and insert 
-it into the DOM:
+To render the record collection we reduce the records to a string of markup and insert it into the DOM:
 
 ```javascript
     var renderRecords = function(records) {
         var items = _.reduce(records, function(acc, record) {
-            return acc + "<li>" +
-                "<h3>" + record.album + "</h3>" +
-                "<p>Artist: " + record.artist + "</p>" +
-                "<p>Year: " + record.year + "</p>" +
-                "<p>Genre: " + record.genre + "</p>" +
+            return acc + 
+                "<li>" +
+                    "<h3>" + record.album + "</h3>" +
+                    "<p>Artist: " + record.artist + "</p>" +
+                    "<p>Year: " + record.year + "</p>" +
+                    "<p>Genre: " + record.genre + "</p>" +
                 "</li>";
         }, "");
         $("#records ul").html(items);
     };
 ```
 
-We can already see a trend in the way values are assigned to elements in the application, 
-always as a reaction to something occuring. We set the visibility of the error-message and 
-spinner and the value of the record collection based on how the AJAX-request goes. 
-This is reactive programming. Things happening as a response to something.
+We can already see a trend in the way values are assigned to elements in the application, always as a reaction to an event occuring. We set the visibility of the error-message and spinner and the value of the record collection based on what we receive back when the AJAX-request returns. This is event driven programming. Things happening as a response to an event.
 
 We continue with the input for the filter we want to apply to our record collection:
 ```javascript
@@ -104,18 +91,9 @@ We continue with the input for the filter we want to apply to our record collect
         renderRecords(filterRecords(filter));
     });
 ```
-With two helper functions to filter out which records match the query and an event-listener 
-to collect the value to filter for, we get a nice little search functionality for our record 
-collection. If the `filterRecords` function look a bit unfamiliar to you I suggest checking 
-out the [LoDash documentation](http://lodash.com/docs). Again we see the same pattern, 
-the contents of the list displaying the records change as a reaction to the events triggered.
+With two helper functions, to filter out which records match the query, and an event-listener to collect the value to filter for, we get a nice little search functionality for our record collection. If the `filterRecords` function look a bit unfamiliar to you I suggest checking out the [LoDash documentation](http://lodash.com/docs). Again we see the same pattern, the contents of the list displaying the records change as a reaction to the events triggered. Also note that we have now called the `renderRecords` function twice from two different places.
 
-We now have the ability to view and filter the records in the collection received from the 
-server. But we also want to be able to add new records into the collection. To make the 
-example a little bit more interesting, and maybe more user-friendly, we will use icons to 
-indicate the validity of the values entered into the form. Each value required will have 
-three states; missing, invalid and valid. And to add a bit of enforcement to the validitiy, 
-the application will not allow the user to push the add button before all fields are valid.
+We now have the ability to view and filter the records in the collection received from the server. But we also want to be able to add new records into the collection. To make the example a little bit more interesting, and maybe more user-friendly, we will use icons to indicate the validity of the values entered into the form. Each value required will have three states; missing, invalid and valid. And to add a bit of enforcement to the validitiy, the application will not allow the user to push the add button before all fields are valid.
 
 The function containing the core part of this functionality is implemented as follows:
 
@@ -135,9 +113,7 @@ The function containing the core part of this functionality is implemented as fo
     };
 ```
 
-This function both sets the approperiate icon-class and returns the validity of the value. 
-Not optimal, but lets roll with it. Next we use this function in conjuction with the form to 
-visualize the validity of the form. The validation rules are as follows:
+This function both sets the approperiate icon-class and returns the validity of the value. Not optimal, but lets roll with it. Next we use this function in conjuction with the form to visualize the validity of the form. The validation rules are as follows:
 
 - Album: No duplicates, so no records with the entered name may exist in the collection.
 - Artist: Has to have a value.
@@ -145,8 +121,7 @@ visualize the validity of the form. The validation rules are as follows:
 of the 1800s we can use four digits as a requirement for a valid year.
 - Genre: Has to have a value.
 
-This chunk of code is perhaps the biggest in this post. But as it is fairly repetative, 
-I am going to let it pass.
+This chunk of code is perhaps the biggest in this post. But as it is fairly repetative, I am going to let it pass.
 
 ```javascript
     var validAlbum = false,
@@ -177,12 +152,9 @@ I am going to let it pass.
         $("[type=submit]").attr("disabled", !valid);
     });
 ```
-We are now using four different values to track the validity of the new record we wish to 
-add to the collection, which are all changing when the user enters new values into the 
-corresponding input field. Again we have the same pattern of reacting to events.
+We are now using four different variables to track the validity of the new record we wish to add to the collection, which are all changing when the user enters new values into the corresponding input field. Again we have the same pattern of reacting to events. We also find ourselves in the situation where we have to keep track of a relatively complex state; the combined validtity of four fields making up the validity of a single record.
 
-The final piece of functionality we want is sending the new record to the server for final 
-verification.
+The final piece of functionality we want is sending the new record to the server for final verification.
 
 ```javascript
     var resetForm = function() {
@@ -217,31 +189,17 @@ verification.
     });
 ```
 
-Again we use the promises interface from jQuery's AJAX-API. As we are preparing the 
-AJAX-request we collect the current values of the form. And as with the previous 
-AJAX-request, we toggle the visibility of a spinner and a potential error-message based on 
-the current state of the request. If the server returns the record to us, we reset the form 
-and re-render the record collection. As a nice-to-have, we let the current active filter 
-stay active.
+Again we use the promises interface from jQuery's AJAX-API. As we are preparing the AJAX-request we collect the current values of the form. And as with the previous AJAX-request, we toggle the visibility of a spinner and a potential error-message based on the current state of the request. If the server returns the record to us, we reset the form and re-render the record collection. As a nice-to-have, we let the current active filter stay active. This also marks the third time we call the `renderRecords` function.
 
-You can view the source in its entirety 
-[here](https://github.com/mollerse/frp-sbs/blob/master/static/reactive.js). 
-Now that we have all the functionality we outlined for the application, lets reimplement it 
-using functional reactive programming (FRP)!
+You can view the source in its entirety [here](https://github.com/mollerse/frp-sbs/blob/master/static/reactive.js). Now that we have all the functionality we outlined for the application, lets reimplement it using functional reactive programming (FRP)!
 
 ## The Functional Reactive Programming Implementation
 
-To implement the application using functional reactive programming we will use bacon.js. 
-I recommend taking a look at the [documentation](https://github.com/baconjs/bacon.js) 
-and have a quick read through of the API bacon.js offers. I will not go into detail with 
-every method I use from the API, so I suggest keeping the docs at hand while reading on.
+To implement the application using functional reactive programming we will use bacon.js. If you did not checkout the links I presented at the beginning of this post, and especially the [bacon.js API docs](https://github.com/baconjs/bacon.js), I will make that suggestion again. I will not go into detail with every method I use from the API, so I suggest keeping the docs at hand while reading on.
 
-Because FRP is different from reactive programming in its approach to implementation the 
-steps in this implementation will not line up with the steps in the previous implementation. 
-Without further ado, let us begin.
+Because FRP is different from event driven programming in its approach to implementation the steps in this implementation will not line up with the steps in the previous implementation. Without further ado, let us begin.
 
-The first step when implementing a user interface with FRP is to define the sources of 
-events and data in the interface. In this application we have the following sources:
+The first step when implementing a user interface with FRP is to define the sources of events and data in the interface. In this application we have the following sources:
 
 - Existing records from the server
 - Input for the filter
@@ -249,18 +207,13 @@ events and data in the interface. In this application we have the following sour
 - Button for sending a new record to the server
 - The added record received from the server
 
-The first source of data is the AJAX-request we send to the server in order to fetch the 
-existing record collection. Because a jQuery AJAX-request is based on promises, we use 
-bacon.js' `Bacon.fromPromise` to create an `EventStream` of the respone.
+The first source of data is the AJAX-request we send to the server in order to fetch the existing record collection. Because a jQuery AJAX-request is based on promises, we use bacon.js' `Bacon.fromPromise` to create an `EventStream` of the respone.
 
 ```javascript
 var records = Bacon.fromPromise($.ajax("/records"));
 ```
 
-Next we have the filter and the inputs in the new record form. These will be represented as 
-properties, which is the bacon.js way of representing continous values. In addition we will 
-need a property representing a record, which is the aggregation of the individual properties 
-from the form.
+Next we have the filter and the inputs in the new record form. These will be represented as properties, which is the bacon.js way of representing continous values. In addition we will need a property representing a record, which is the aggregation of the individual properties from the form.
 
 ```javascript
     var propertyFromInput = function(field) {
@@ -287,18 +240,14 @@ from the form.
     });
 ```
 
-The button for triggering the addition of a new record is perhaps the most familiar piece of 
-code, if you have read introductions to FRP or other blogposts about FRP before.
+The button for triggering the addition of a new record is perhaps the most familiar piece of code, if you have read introductions to FRP or other blogposts about FRP before.
 
 ```javascript
     var add = Bacon.fromEventTarget($("[type=submit]"), "click")
             .doAction(".preventDefault");
 ```
 
-The last source of data in this application is the AJAX-request which posts the added record 
-to the server and receives it back. In addition we want to collect all added records in a 
-list so we can combine it with the existing records we received from the server. To do so, 
-we use a scanner.
+The last source of data in this application is the AJAX-request which posts the added record to the server and receives it back. In addition we want to collect all added records in a list so we can combine it with the existing records we received from the server. To do so, we use a scanner to create a composite property from all the events in the stream. We also want a property that represents the combination of all the records in the application.
 
 ```javascript
     var addedRecord = record.sampledBy(add)
@@ -315,18 +264,9 @@ we use a scanner.
     var allRecords = records.combine(addedRecords, ".concat");
 ```
 
-This is perhaps the most complicated piece of code in this implementation, so I will take a 
-moment to step through it. The first thing we do is to take a snapshot of the value of the 
-record-property when we get an event from the add-button. Then we take that value and 
-prepare an AJAX-request with the value as the body. Since `Bacon.fromPromise` also returns a 
-new event stream and we do not want to deal with nested handlers, we use `flatMapLatest` to 
-get the latest event stream created, which is the response from the server. It is worth 
-mentioning here that error-events will pass through normal handlers so that the form will 
-not be reset if the request should fail.
+This is perhaps the most complicated piece of code in this implementation, so I will take a moment to step through it. The first thing we do is to take a snapshot of the value of the record-property when we get an event from the add-button. Then we take that value and prepare an AJAX-request with the value as the body. Since `Bacon.fromPromise` also returns a new event stream and we do not want to deal with nested handlers, we use `flatMapLatest` to get the latest event stream created, which is the response from the server. It is worth mentioning here that error-events will pass through normal handlers so that the form will not be reset if the request should fail.
 
-The second step in implementing a user interface using FRP is to declare the relationships 
-between the event and data sources and the various other elements of the user interface. 
-In this application we have the following elements:
+The second step in implementing a user interface using FRP is to declare the relationships between the event and data sources and the various other elements of the user interface. In this application we have the following elements:
 
 - A spinner to indicate a pending request for the exisiting record collection
 - An error-message if fetching the existing record collection fails
@@ -336,48 +276,37 @@ In this application we have the following elements:
 - An error-message if adding the new record failed
 - A filtered view of the existing record collection and all the added records
 
-First up is the spinner that indicates the pending request for the existing record 
-collection. We only want to display it while a request is pending and hide it when we 
-receive data, either records or an error.
+First up is the spinner that indicates the pending request for the existing record collection. We only want to display it while a request is pending and hide it when we receive data, either records or an error.
 
 ```javascript
     records.map(Boolean).mapError(Boolean).not()
         .assign($("#records .loader"), "toggle");
 ```
 
-Mapping both data and errors to Boolean values, any truthy value becomes true and any falsy 
-value becomes false, and assigning it to the function `toggle` on the jQuery-object 
-representing the spinner. Passing the values through `not()` is done because we want to hide 
-the spinner if any data is returned from the server.
+Mapping both data and errors to Boolean values, any truthy value becomes `true` and any falsy value becomes `false`, and assigning it to the function `toggle` on the jQuery-object representing the spinner. Passing the values through `not()` is done because we want to hide the spinner if any data is returned from the server.
 
-We want to display an error-message when we get an error from the server and keep it hidden 
-when we get other data. We do this in the same way as with the spinner.
+We want to display an error-message when we get an error from the server and keep it hidden when we get other data. We do this in the same way as with the spinner. We pass records through `not()` before we map the errors because we want any data to keep the error-message hidden.
 
 ```javascript
     records.map(Boolean).not().mapError(Boolean)
         .assign($("#records .error"), "toggle");
 ```
 
-For the input-field icons we need a bit more code. Similar to the reactive implementation, 
-we need variables to represent the validity of the input field. However, in this 
-implementation, rather than assigning the value of the validity we declare it as a 
-relationship between the property representing the value and some validity criteria.
+For the input-field icons we need a bit more code. Similar to the event driven implementation, we need variables to represent the validity of the input field. However, in this implementation, rather than assigning the value of the validity we declare it as a relationship between the property representing the value and some validity criteria.
 
 ```javascript
     var validAlbum = album
         .combine(allRecords, function(album, records) {
-            if(!album) return true;
-            return _.any(records,{"album": album});
-        })
-        .not();
+            if(!album) return false;
+            return !_.any(records,{"album": album});
+        });
     var validArtist  = artist.map(Boolean);
-    //The testRegex method is the same as the previous implementation
+    //The testRegex method is the same as in the event driven implementation
     var validYear = year.map(testRegex("^\\d{4}$"));
     var validGenre = genre.map(Boolean);
 ```
 
-Next we map the value of the property to the corresponding icon-class and assign it to the 
-correct element.
+Next we map the value of the property to the corresponding icon-class and assign it to the correct element.
 
 ```javascript
     var mapToInputIcon = function(input, valid) {
@@ -401,25 +330,18 @@ correct element.
         .assign($("#genre + i"), "attr", "class");
 ```
 
-Because we decleared the validity separatly, we will not have to do assignment as a part of 
-the mapping-function.
+Because we decleared the validity separatly, we will not have to do assignment as a part of the mapping-function.
 
-To enable the add-button when all the fields in the form are valid, we just declare a 
-relationship between the validity of the input-fields and the `disabled` property of the 
-correct element.
+To enable the add-button when all the fields in the form are valid, we just declare a relationship between the validity of the input-fields and the `disabled` property of the correct element.
 
 ```javascript
     validAlbum.and(validArtist).and(validYear).and(validGenre).not()
         .assign($("[type=submit]"), "attr", "disabled");
 ```
 
-Again we pass the value through `not()` because we want it not to be disabled when all the 
-fields are valid.
+Again we pass the value through `not()` because we want it not to be disabled when all the fields are valid.
 
-For the AJAX-request for posting new records to the server we want to display a spinner, 
-like with the other AJAX-request for fetching the existing record collection. We have a 
-twist here though, which is that we only want to display it after we have pushed the 
-add-button and the response is still pending.
+For the AJAX-request for posting new records to the server we want to display a spinner, like with the other AJAX-request for fetching the existing record collection. We have a twist here though, which is that we only want to display it after we have pushed the add-button and the response is still pending.
 
 ```javascript
     addedRecord.map(Boolean).mapError(Boolean).not()
@@ -427,17 +349,14 @@ add-button and the response is still pending.
         .assign($(".loader-small"), "toggle");
 ```
 
-The relationship between the add record request and the error-message for the request is the 
-same as with the request for existing records.
+The relationship between the add record request and the error-message for the request is the same as with the request for existing records.
 
 ```javascript
     addedRecord.map(Boolean).not().mapError(Boolean)
         .assign($("#add-record .error"), "toggle");
 ```
 
-Finally we want to display the filtered combination between the existing record collection 
-and all the added records. So we declare the relationship between the existing records, the 
-added records and the filter and assign it to the correct element in the interface.
+Finally we want to display the filtered combination between the existing record collection and all the added records. So we declare the relationship between the existing records, the added records and the filter and assign it to the correct element in the interface.
 
 ```javascript
     allRecords
@@ -446,12 +365,9 @@ added records and the filter and assign it to the correct element in the interfa
         .assign($("#records ul"), "html");
 ```
 
-The `filterRecords` and `renderRecords` functions are mostly the same as the reactive 
-implementations, minus DOM insertion in `renderRecords` and a small change to the signature 
-of `filterRecords`.
+The `filterRecords` and `renderRecords` functions are mostly the same as the reactive implementations, minus DOM insertion in `renderRecords` and a small change to the signature of `filterRecords`.
 
-We have now implemented the same functionality using FRP. The source is available in its 
-entirety [here](https://github.com/mollerse/frp-sbs/blob/master/static/functional.js).
+We have now implemented the same functionality using FRP. The source is available in its entirety [here](https://github.com/mollerse/frp-sbs/blob/master/static/functional.js).
 
 ## Comparison
 
