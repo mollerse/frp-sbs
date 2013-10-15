@@ -593,3 +593,7 @@ subtle differences that could be major for various usecases. So my suggestion
 to anyone wishing to spend some time studying FRP is to repeat the exercise of
 implementing the same application in both your preferred techinique and FRP.
 This blogpost has hopefully convinced you that it would be a worthwile effort.
+
+## Thanks
+
+Big thanks to Mikael Brevik for inspiration and feedback!
