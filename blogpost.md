@@ -596,4 +596,4 @@ This blogpost has hopefully convinced you that it would be a worthwile effort.
 
 ## Thanks
 
-Big thanks to Mikael Brevik for inspiration and feedback!
+Big thanks to Mikael Brevik for inspiration and feedback and Magnus Fjell for proofreading!
