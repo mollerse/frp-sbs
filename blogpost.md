@@ -27,12 +27,13 @@ before we get started;
 - [061 JSJ Functional Reactive Programming with Juha Paananen and Joe Fiorini](http://javascriptjabber.com/061-jsj-functional-reactive-programming-with-juha-paananen-and-joe-fiorini/)
 
 I will walk through the two implementations step by step explaining the
-process as I go along. A demo of the application will be available [here](http
-://frp-sbs.herokuapp.com) and I suggest taking it for a spin now to get a feel
-for the functionality it offers. It might be handy to keep it around for
-reference as you read along.
+process as I go along. A demo of the application will be available
+[here](http://frp-sbs.herokuapp.com) and I suggest taking it for a spin
+now to get a feel for the functionality it offers. It might be handy to
+keep it around for reference as you read along.
 
-## The Application Before we get down to the business of code, we will need to
+## The Application
+Before we get down to the business of code, we will need to
 define our application. The application used for the comparison will be a
 simple record (the vinyl kind, not the data kind) collection It will list out
 records in the collection and allow the user to add new records. To ensure
@@ -52,7 +53,8 @@ To achieve this functionality, there are a few things we need to implement:
 
 This looks like a fairly simple task. First, let us implement it with event
 driven programming, using the familiar jQuery liberary. Let us also throw in
-some LoDash to get some nice functional handling of collections.
+some [LoDash](http://lodash.com/) to get some nice functional handling of
+collections.
 
 ## The Event Driven Implementation
 
@@ -76,7 +78,7 @@ jQuery:
         });
 ```
 
-This is familiar stuff to anyone that has done AJAX-requests in the browser
+This should be familiar to anyone that has done AJAX-requests in the browser
 and the promises interface makes it very clean. If the request succeeds, we
 set the data received to be the current record collection and render it. If
 the request fails to get the record collection from the server, we show an
@@ -105,7 +107,7 @@ We can already see a trend in the way values are assigned to elements in the
 application, always as a reaction to an event occuring. We set the visibility
 of the error-message and spinner and the value of the record collection based
 on what we receive back when the AJAX-request returns. This is event driven
-programming. Things happening as a response to an event.
+programming. Actions and reactions happening as a response to an event.
 
 We continue with the input for the filter we want to apply to our record collection:
 ```javascript
@@ -260,16 +262,15 @@ server returns the record to us, we reset the form and re-render the record
 collection. As a nice-to-have, we let the current active filter stay active.
 This also marks the third time we call the `renderRecords` function.
 
-You can view the source in its entirety [here](https://github.com/mollerse
-/frp-sbs/blob/master/static/reactive.js). Now that we have all the
-functionality we outlined for the application, lets reimplement it using
-functional reactive programming (FRP)!
+You can view the source in its entirety
+[here](https://github.com/mollerse/frp-sbs/blob/master/static/event.js).
+Now that we have all the functionality we outlined for the application,
+lets reimplement it using functional reactive programming (FRP)!
 
 ## The Functional Reactive Programming Implementation
 
-To implement the application using functional reactive programming we will use
-bacon.js. If you did not checkout the links I presented at the beginning of
-this post, and especially the [bacon.js API
+For the FRP part we will use bacon.js. If you did not checkout the links I
+presented at the beginning of this post, and especially the [bacon.js API
 docs](https://github.com/baconjs/bacon.js), I will make that suggestion again.
 I will not go into detail with every method I use from the API, so I suggest
 keeping the docs at hand while reading on.
@@ -328,8 +329,7 @@ the aggregation of the individual properties from the form.
 ```
 
 The button for triggering the addition of a new record is perhaps the most
-familiar piece of code, if you have read introductions to FRP or other
-blogposts about FRP before.
+familiar piece of code, if you have read any of the introductory FRP posts.
 
 ```javascript
     var add = Bacon.fromEventTarget($("[type=submit]"), "click")
@@ -337,11 +337,12 @@ blogposts about FRP before.
 ```
 
 The last source of data in this application is the AJAX-request which posts
-the added record to the server and receives it back. In addition we want to
-collect all added records in a list so we can combine it with the existing
-records we received from the server. To do so, we use a scanner to create a
-composite property from all the events in the stream. We also want a property
-that represents the combination of all the records in the application.
+the added record to the server and gets the same data in return. In addition
+we want to collect all added records in a list so we can combine it with the
+existing records we received from the server. To do so, we use a scanner to
+create a composite property from all the events in the stream. We also want
+a property that represents the combination of all the records in the
+application.
 
 ```javascript
     var addedRecord = record.sampledBy(add)
@@ -500,8 +501,8 @@ reactive implementations, minus DOM insertion in `renderRecords` and a small
 change to the signature of `filterRecords`.
 
 We have now implemented the same functionality using FRP. The source is
-available in its entirety [here](https://github.com/mollerse/frp-
-sbs/blob/master/static/functional.js).
+available as a whole
+[here](https://github.com/mollerse/frp-sbs/blob/master/static/functional.js).
 
 ## Comparison
 
@@ -532,7 +533,7 @@ driven implementation we manually call the function to render the record
 collection list three times in three different places.
 
 ```javascript
-    #Some implementation details omitted for clarity
+    // Some implementation details omitted for clarity
 
     $.ajax("/records") //GET
         .done(function(data) {
@@ -560,7 +561,7 @@ interfaces in frontend web development.
 The same functionality is achieved in the FRP implementation like so:
 
 ```javascript
-    #Some implementation details omitted for clarity
+    // Some implementation details omitted for clarity
 
     records.combine(addedRecords, ".concat")
         .combine(recordFilter, filterRecords)
