@@ -12,7 +12,7 @@ often hard to get a grasp on when comparing programming techniques.
 
 What this blogpost will not cover is introductory material to either approach.
 Event Driven Programming is probably well known to anyone who has done
-javascript, either in the browser or on the server. The all to familiar
+javascript, either in the browser or on the server. The all too familiar
 `.on('event', handler)` is the basis of most asyncronous code in javascript.
 FRP on the other hand might be unfamiliar. There are many great sources of
 introductions to FRP and bacon.js, the liberary I will be using in this
@@ -35,7 +35,7 @@ keep it around for reference as you read along.
 ## The Application
 Before we get down to the business of code, we will need to
 define our application. The application used for the comparison will be a
-simple record (the vinyl kind, not the data kind) collection It will list out
+simple record (the vinyl kind, not the data kind) collection. It will list out
 records in the collection and allow the user to add new records. To ensure
 consistency in the collection, the application will only allow unique records
 and valid data.
@@ -46,19 +46,19 @@ To achieve this functionality, there are a few things we need to implement:
 - Listing records in the collection
 - A way to filter the viewed records
 - Adding a new record to the collection
-- Informing the user wether the data entered is valid
+- Informing the user whether the data entered is valid
 - Sending the new record to the server for verification
 - Receiving the new record or an error from the server
 - Adding the new record to the viewed collection
 
 This looks like a fairly simple task. First, let us implement it with event
-driven programming, using the familiar jQuery liberary. Let us also throw in
+driven programming, using the familiar jQuery library. Let us also throw in
 some [LoDash](http://lodash.com/) to get some nice functional handling of
 collections.
 
 ## The Event Driven Implementation
 
-First thing we need is to fetch the record collection from the server when we
+The first thing we need to do is to fetch the record collection from the server when we
 load the page. We can do this using the excellent promise-based AJAX API in
 jQuery:
 
@@ -82,7 +82,7 @@ This should be familiar to anyone that has done AJAX-requests in the browser
 and the promises interface makes it very clean. If the request succeeds, we
 set the data received to be the current record collection and render it. If
 the request fails to get the record collection from the server, we show an
-error-message. Regardless of wether the request succeed or fail, we hide the
+error-message. Regardless of whether the request succeed or fail, we hide the
 spinner that indicates a pending request.
 
 To render the record collection we reduce the records to a string of markup
@@ -106,7 +106,7 @@ and insert it into the DOM:
 We can already see a trend in the way values are assigned to elements in the
 application, always as a reaction to an event occuring. We set the visibility
 of the error-message and spinner and the value of the record collection based
-on what we receive back when the AJAX-request returns. This is event driven
+on what we receive when the AJAX-request returns. This is event driven
 programming. Actions and reactions happening as a response to an event.
 
 We continue with the input for the filter we want to apply to our record collection:
@@ -140,7 +140,7 @@ triggered. Also note that we have now called the `renderRecords` function
 twice from two different places.
 
 We now have the ability to view and filter the records in the collection
-received from the server. But we also want to be able to add new records into
+received from the server. But we also want to be able to add new records to
 the collection. To make the example a little bit more interesting, and maybe
 more user-friendly, we will use icons to indicate the validity of the values
 entered into the form. Each value required will have three states; missing,
@@ -168,7 +168,7 @@ follows:
 ```
 
 This function both sets the approperiate icon-class and returns the validity
-of the value. Not optimal, but lets roll with it. Next we use this function in
+of the value. Not optimal, but let's roll with it. Next we use this function in
 conjuction with the form to visualize the validity of the form. The validation
 rules are as follows:
 
@@ -276,7 +276,7 @@ I will not go into detail with every method I use from the API, so I suggest
 keeping the docs at hand while reading on.
 
 Because FRP is different from event driven programming in its approach to
-implementation the steps in this implementation will not line up with the
+implementation, the steps in this implementation will not line up with the
 steps in the previous implementation. Without further ado, let us begin.
 
 The first step when implementing a user interface with FRP is to define the
@@ -338,7 +338,7 @@ familiar piece of code, if you have read any of the introductory FRP posts.
 
 The last source of data in this application is the AJAX-request which posts
 the added record to the server and gets the same data in return. In addition
-we want to collect all added records in a list so we can combine it with the
+we want to collect all added records in a list, so we can combine it with the
 existing records we received from the server. To do so, we use a scanner to
 create a composite property from all the events in the stream. We also want
 a property that represents the combination of all the records in the
@@ -377,7 +377,7 @@ elements:
 - A spinner to indicate a pending request for the exisiting record collection
 - An error-message if fetching the existing record collection fails
 - Icons visualizing the validity of the input fields in the new record form
-- The enabeling of the add-button
+- The enabling of the add-button
 - A spinner to indicate a pending request to add a new record to the collection
 - An error-message if adding the new record failed
 - A filtered view of the existing record collection and all the added records
@@ -450,7 +450,7 @@ assign it to the correct element.
         .assign($("#genre + i"), "attr", "class");
 ```
 
-Because we decleared the validity separatly, we will not have to do assignment
+Because we decleared the validity separately, we will not have to do assignment
 as a part of the mapping-function.
 
 To enable the add-button when all the fields in the form are valid, we just
@@ -514,7 +514,7 @@ In the event driven implementation, we had to add some state to the code in
 order to get behavior that depended on more than one source of data. The two
 examples in this application are the record collection, which is manipulated
 by the two AJAX-requests, and the validity checks of the input fields, which
-controls the enabeling of the add-button. These pieces of state are mutated
+controls the enabling of the add-button. These pieces of state are mutated
 from within event handlers and read from within event handlers.
 
 The same two examples in the functional reactive implementation also have the
