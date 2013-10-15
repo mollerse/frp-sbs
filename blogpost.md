@@ -1,4 +1,4 @@
-# Step by Step: Event Driven Programming and Functional Reactive Programming
+# Event Driven and Functional Reactive Programming, Step by Step.
 
 The aim of this blogpost is to explore the differences between Event Driven
 Programming and Functional Reactive Programming(FRP) by implementing the same
